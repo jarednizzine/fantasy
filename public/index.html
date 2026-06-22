@@ -117,8 +117,8 @@
         </div>
     </div>
 
-    <script>
-    const API = 'https://fantasy-ejq7.onrender.com//api';   // ← CHANGE THIS
+<script>
+    const API = 'https://fantasy-ejq7.onrender.com/api';   // ← CHANGE THIS
 
     let currentUser = null;
     let players = [];
@@ -150,7 +150,7 @@
         }
     }
 
-    // ==================== OTHER FUNCTIONS (same as before) ====================
+    // ==================== PLAYERS ====================
     async function loadPlayers() {
         try {
             const res = await fetch(`${API}/players`);
@@ -180,6 +180,7 @@
         alert("Player added to roster");
     }
 
+    // ==================== TEAM CREATION ====================
     async function createTeam() {
         if (!currentUser) return alert("Please login first");
         const name = prompt("Enter Team Name:");
@@ -191,10 +192,10 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ owner: currentUser.username, name, roster: currentRoster })
             });
-            alert("Team created!");
+            alert("Team created successfully!");
             currentRoster = [];
             loadMyTeams();
-        } catch (e) { alert("Failed"); }
+        } catch (e) { alert("Failed to create team"); }
     }
 
     async function loadMyTeams() {
@@ -209,6 +210,7 @@
         `).join('');
     }
 
+    // ==================== UI ====================
     function showSection(section) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.getElementById(section).classList.add('active');
@@ -234,23 +236,13 @@
 
     // ==================== INIT ====================
     async function init() {
-        // Load saved user
         const saved = localStorage.getItem('currentUser');
-        if (saved) {
-            currentUser = JSON.parse(saved);
-        }
+        if (saved) currentUser = JSON.parse(saved);
 
         updateUserUI();
         await loadPlayers();
         showSection('players-section');
-
-        // Only show modal if NOT logged in
-        if (!currentUser) {
-            // Optional: show modal after a short delay
-            setTimeout(() => {
-                if (!currentUser) showAuthModal();
-            }, 1200);
-        }
+        // Modal will ONLY appear when button is clicked
     }
 
     window.onload = init;
