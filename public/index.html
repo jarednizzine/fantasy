@@ -6,7 +6,6 @@
     <title>FantasyForge</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
@@ -17,15 +16,14 @@
         .nav-active { border-bottom: 3px solid #22d3ee; color: #22d3ee; }
     </style>
 </head>
-<body class="bg-zinc-950 text-zinc-100 min-h-screen">
-    <!-- Navbar -->
+<body class="bg-zinc-950 text-zinc-100">
     <nav class="bg-zinc-900 border-b border-zinc-800 sticky top-0 z-50">
         <div class="max-w-screen-2xl mx-auto px-8 py-5 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <div class="w-9 h-9 bg-cyan-500 rounded-2xl flex items-center justify-center text-2xl">⚔️</div>
+                <div class="w-9 h-9 bg-cyan-500 rounded-2xl flex items-center justify-center text-xl">⚔️</div>
                 <span class="font-display text-3xl font-semibold tracking-tight">FantasyForge</span>
             </div>
-            <div class="flex gap-8 text-sm font-medium">
+            <div class="flex gap-8 text-sm">
                 <button onclick="showSection('players-section')" class="nav-btn nav-active px-4 py-2" id="nav-players">Players</button>
                 <button onclick="showSection('drafts-section')" class="nav-btn px-4 py-2" id="nav-drafts">Drafts</button>
                 <button onclick="showSection('my-teams-section')" class="nav-btn px-4 py-2" id="nav-teams">My Teams</button>
@@ -38,11 +36,12 @@
     <!-- AUTH MODAL -->
     <div id="auth-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[100]">
         <div class="bg-zinc-900 border border-zinc-700 rounded-3xl w-full max-w-md p-8">
-            <h3 id="auth-title" class="text-2xl font-medium mb-6">Login</h3>
-            <input id="auth-username" placeholder="Username" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-5 py-4 mb-3">
-            <input id="auth-password" type="password" placeholder="Password" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-5 py-4">
-            <button onclick="handleAuth()" class="w-full mt-6 py-3.5 bg-white text-zinc-900 rounded-3xl font-medium">Login / Register</button>
-            <p class="text-center text-xs text-zinc-500 mt-6">New? Just enter username + password to register</p>
+            <h3 class="text-2xl font-medium mb-6">Create Account</h3>
+            <input id="reg-username" placeholder="Username" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-5 py-4 mb-3">
+            <input id="reg-email" type="email" placeholder="Email Address" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-5 py-4 mb-3">
+            <input id="reg-password" type="password" placeholder="Password" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-5 py-4 mb-6">
+            <button onclick="handleRegister()" class="w-full py-3.5 bg-white text-zinc-900 rounded-3xl font-medium">Sign Up</button>
+            <p class="text-center text-xs text-zinc-500 mt-6">Already have an account? <span onclick="alert('Login with admin/admin for testing')" class="text-cyan-400 cursor-pointer">Login</span></p>
         </div>
     </div>
 
@@ -54,7 +53,7 @@
                 <i class="fas fa-plus"></i> Add Player
             </button>
         </div>
-        <input id="search" placeholder="Search players..." class="w-full bg-zinc-900 border border-zinc-700 rounded-3xl px-6 py-4 mb-6" onkeyup="filterPlayers()">
+        <input id="search" placeholder="Search players..." class="w-full bg-zinc-900 border border-zinc-700 rounded-3xl px-6 py-4 mb-6 outline-none" onkeyup="filterPlayers()">
         <table class="w-full bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden">
             <thead class="bg-zinc-800">
                 <tr class="text-xs uppercase tracking-widest text-zinc-400">
@@ -80,7 +79,12 @@
 
     <!-- MY TEAMS SECTION -->
     <div id="my-teams-section" class="section max-w-screen-2xl mx-auto px-8 py-10">
-        <h1 class="font-display text-5xl font-semibold mb-8">My Teams</h1>
+        <div class="flex justify-between mb-8">
+            <h1 class="font-display text-5xl font-semibold">My Teams</h1>
+            <button onclick="createTeam()" class="bg-white text-zinc-900 px-6 py-3 rounded-3xl font-medium flex items-center gap-2">
+                <i class="fas fa-plus"></i> Create New Team
+            </button>
+        </div>
         <div id="teams-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
     </div>
 
@@ -89,20 +93,12 @@
         <h1 class="font-display text-5xl font-semibold mb-8">Admin Controls</h1>
         <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8">
             <h3 class="font-semibold text-xl mb-4">Bulk Import Players</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-xs text-zinc-400 mb-2">CSV File</label>
-                    <input type="file" id="csv-input" accept=".csv" onchange="importCSV(event)" class="block w-full text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs text-zinc-400 mb-2">PDF File</label>
-                    <input type="file" id="pdf-input" accept=".pdf" onchange="importPDF(event)" class="block w-full text-sm">
-                </div>
-            </div>
+            <input type="file" id="csv-input" accept=".csv" onchange="importCSV(event)" class="block w-full text-sm mb-4">
+            <input type="file" id="pdf-input" accept=".pdf" onchange="importPDF(event)" class="block w-full text-sm">
         </div>
     </div>
 
-    <!-- Add Player Modal -->
+    <!-- Add Single Player Modal -->
     <div id="add-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
         <div class="bg-zinc-900 border border-zinc-700 rounded-3xl w-full max-w-md p-8">
             <h3 class="text-2xl font-medium mb-6">Add New Player</h3>
@@ -123,12 +119,10 @@
     </div>
 
     <script>
-        const API = 'https://fantasy-ejq7.onrender.com/api';   // Change to your Render URL later
-        const socket = io('https://fantasy-ejq7.onrender.com'); // Change to your Render URL later
-
+        const API = 'https://fantasy-ejq7.onrender.com/api';   // ← CHANGE TO YOUR RENDER URL
         let currentUser = null;
         let players = [];
-        let currentDraftRoster = [];
+        let currentRoster = [];
 
         // ==================== AUTH ====================
         function showAuthModal() {
@@ -136,51 +130,24 @@
             document.getElementById('auth-modal').classList.add('flex');
         }
 
-        async function handleAuth() {
-            const username = document.getElementById('auth-username').value.trim();
-            const password = document.getElementById('auth-password').value;
+        async function handleRegister() {
+            const username = document.getElementById('reg-username').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            const password = document.getElementById('reg-password').value;
 
-            if (!username || !password) return alert("Please fill all fields");
+            if (!username || !email || !password) return alert("All fields are required");
 
             try {
-                const res = await fetch(`${API}/login`, {
+                const res = await fetch(`${API}/register`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ username, email, password })
                 });
                 const data = await res.json();
-
-                if (data.success) {
-                    currentUser = data.user;
-                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                    document.getElementById('auth-modal').classList.add('hidden');
-                    updateUserUI();
-                    loadPlayers();
-                } else {
-                    alert(data.error);
-                }
+                alert(data.message || data.error);
             } catch (e) {
-                alert("Cannot connect to server. Is the backend running?");
+                alert("Cannot connect to server");
             }
-        }
-
-        function updateUserUI() {
-            const el = document.getElementById('user-info');
-            if (!currentUser) {
-                el.innerHTML = `<button onclick="showAuthModal()" class="px-5 py-2 bg-white text-zinc-900 rounded-3xl text-sm font-medium">Login</button>`;
-                return;
-            }
-            el.innerHTML = `
-                <span class="text-cyan-400">${currentUser.username}</span>
-                ${currentUser.isAdmin ? '<span class="ml-2 text-xs bg-violet-600 px-2 py-0.5 rounded">ADMIN</span>' : ''}
-                <button onclick="logout()" class="ml-4 text-xs px-3 py-1 border border-zinc-600 rounded-2xl">Logout</button>
-            `;
-        }
-
-        function logout() {
-            currentUser = null;
-            localStorage.removeItem('currentUser');
-            updateUserUI();
         }
 
         // ==================== PLAYERS ====================
@@ -189,145 +156,98 @@
                 const res = await fetch(`${API}/players`);
                 players = await res.json();
                 renderPlayers();
-            } catch (e) { console.error(e); }
+            } catch (e) {}
         }
 
-        function renderPlayers(filtered = players) {
+        function renderPlayers() {
             const tbody = document.getElementById('players-tbody');
-            tbody.innerHTML = '';
-            filtered.forEach(p => {
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-zinc-800 transition-colors';
-                tr.innerHTML = `
-                    <td class="px-8 py-5 font-medium">${p.username}</td>
+            tbody.innerHTML = players.map(p => `
+                <tr class="hover:bg-zinc-800">
+                    <td class="px-8 py-5">${p.username}</td>
                     <td class="px-8 py-5 text-zinc-300">${p.team}</td>
-                    <td class="px-8 py-5 text-center font-mono">${p.wins}-${p.losses}</td>
-                    <td class="px-8 py-5 text-center font-mono text-cyan-400">${p.adp}</td>
+                    <td class="px-8 py-5 text-center">${p.wins}-${p.losses}</td>
+                    <td class="px-8 py-5 text-center text-cyan-400">${p.adp}</td>
                     <td class="px-8 py-5 text-right">
-                        <button onclick="addToDraft(${p.id})" class="text-xs px-5 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-2xl">Draft</button>
+                        <button onclick="addToRoster(${p.id})" class="text-xs px-5 py-2 bg-cyan-600 rounded-2xl">Add to Roster</button>
                     </td>
-                `;
-                tbody.appendChild(tr);
-            });
+                </tr>
+            `).join('');
         }
 
-        function filterPlayers() {
-            const term = document.getElementById('search').value.toLowerCase();
-            const filtered = players.filter(p => 
-                p.username.toLowerCase().includes(term) || p.team.toLowerCase().includes(term)
-            );
-            renderPlayers(filtered);
-        }
-
-        function showAddPlayerModal() {
-            if (!currentUser?.isAdmin) return alert("Admin only");
-            document.getElementById('add-modal').classList.remove('hidden');
-            document.getElementById('add-modal').classList.add('flex');
-        }
-
-        function closeAddModal() {
-            document.getElementById('add-modal').classList.add('hidden');
-            document.getElementById('add-modal').classList.remove('flex');
-        }
-
-        async function saveNewPlayer() {
-            const username = document.getElementById('modal-username').value.trim();
-            if (!username) return alert("Username required");
-
-            await fetch(`${API}/players`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    username,
-                    team: document.getElementById('modal-team').value.trim() || "Independent",
-                    wins: parseInt(document.getElementById('modal-wins').value) || 0,
-                    losses: parseInt(document.getElementById('modal-losses').value) || 0,
-                    adp: parseFloat(document.getElementById('modal-adp').value) || 999
-                })
-            });
-            closeAddModal();
-            loadPlayers();
-        }
-
-        // Bulk Import (CSV)
-        async function importCSV(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const text = await file.text();
-            const lines = text.trim().split('\n');
-            const newPlayers = [];
-
-            lines.forEach(line => {
-                const parts = line.split(',').map(p => p.trim());
-                if (parts.length >= 5) {
-                    newPlayers.push({
-                        username: parts[0],
-                        team: parts[1] || "Independent",
-                        wins: parseInt(parts[2]) || 0,
-                        losses: parseInt(parts[3]) || 0,
-                        adp: parseFloat(parts[4]) || 999
-                    });
-                }
-            });
-
-            await fetch(`${API}/bulk-players`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ players: newPlayers })
-            });
-            loadPlayers();
-            alert(`Imported ${newPlayers.length} players`);
-        }
-
-        // Bulk Import (PDF) - same as before
-        async function importPDF(e) { /* Same logic as previous version - you can reuse it */ }
-
-        function addToDraft(id) {
+        function addToRoster(id) {
             if (!currentUser) return alert("Please login");
-            if (!currentDraftRoster.includes(id)) currentDraftRoster.push(id);
-            alert("Player added to your roster");
+            if (!currentRoster.includes(id)) currentRoster.push(id);
+            alert("Player added to current roster");
         }
 
-        // ==================== DRAFTS ====================
-        async function createNewDraft() {
-            if (!currentUser?.isAdmin) return alert("Admin only");
-            const name = prompt("Draft Name?");
+        // ==================== TEAM CREATION ====================
+        async function createTeam() {
+            if (!currentUser) return alert("Please login first");
+            const name = prompt("Team Name?");
             if (!name) return;
 
-            await fetch(`${API}/drafts`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ name, createdBy: currentUser.username })
-            });
-            loadDrafts();
+            try {
+                await fetch(`${API}/teams`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        owner: currentUser.username,
+                        name: name,
+                        roster: currentRoster
+                    })
+                });
+                alert("Team created successfully!");
+                currentRoster = [];
+                loadMyTeams();
+            } catch (e) {
+                alert("Failed to create team");
+            }
         }
 
-        async function loadDrafts() {
-            const res = await fetch(`${API}/drafts`);
-            const drafts = await res.json();
-            // Render logic here (simple version)
-            console.log("Drafts loaded", drafts);
+        async function loadMyTeams() {
+            if (!currentUser) return;
+            const res = await fetch(`${API}/teams/${currentUser.username}`);
+            const teams = await res.json();
+            const container = document.getElementById('teams-grid');
+            container.innerHTML = teams.map(t => `
+                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-6">
+                    <div class="font-semibold text-xl">${t.name}</div>
+                    <div class="text-xs text-zinc-400">${t.roster.length} players</div>
+                </div>
+            `).join('');
         }
 
-        // ==================== NAVIGATION ====================
+        // ==================== NAV & INIT ====================
         function showSection(section) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.getElementById(section).classList.add('active');
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('nav-active'));
-            document.getElementById('nav-' + section.split('-')[0]).classList.add('nav-active');
         }
 
-        // Init
         async function init() {
             const saved = localStorage.getItem('currentUser');
-            if (saved) {
-                currentUser = JSON.parse(saved);
-                updateUserUI();
-            } else {
-                showAuthModal();
-            }
+            if (saved) currentUser = JSON.parse(saved);
+            updateUserUI();
             await loadPlayers();
             showSection('players-section');
+            if (!currentUser) showAuthModal();
+        }
+
+        function updateUserUI() {
+            const el = document.getElementById('user-info');
+            if (!currentUser) {
+                el.innerHTML = `<button onclick="showAuthModal()" class="px-5 py-2 bg-white text-zinc-900 rounded-3xl text-sm font-medium">Login</button>`;
+            } else {
+                el.innerHTML = `
+                    <span class="text-cyan-400">${currentUser.username}</span>
+                    <button onclick="logout()" class="ml-4 text-xs px-3 py-1 border border-zinc-600 rounded-2xl">Logout</button>
+                `;
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('currentUser');
+            updateUserUI();
         }
 
         window.onload = init;
