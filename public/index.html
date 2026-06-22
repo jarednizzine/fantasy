@@ -34,14 +34,19 @@
     </nav>
 
     <!-- AUTH MODAL -->
-    <div id="auth-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[100]">
-        <div class="bg-zinc-900 border border-zinc-700 rounded-3xl w-full max-w-md p-8">
-            <h3 class="text-2xl font-medium mb-6">Create Account</h3>
-            <input id="reg-username" placeholder="Username" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-5 py-4 mb-3">
-            <input id="reg-email" type="email" placeholder="Email Address" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-5 py-4 mb-3">
-            <input id="reg-password" type="password" placeholder="Password" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-5 py-4 mb-6">
-            <button onclick="handleRegister()" class="w-full py-3.5 bg-white text-zinc-900 rounded-3xl font-medium">Sign Up</button>
-            <p class="text-center text-xs text-zinc-500 mt-6">Test Login: admin / admin</p>
+    <div id="auth-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[100]" onclick="if(event.target === this) closeAuthModal()">
+        <div class="bg-zinc-900 border border-zinc-700 rounded-3xl w-full max-w-md p-8" onclick="event.stopImmediatePropagation()">
+            <h3 id="modal-title" class="text-2xl font-medium mb-6">Login</h3>
+            
+            <input id="auth-username" placeholder="Username or Email" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-5 py-4 mb-3">
+            <input id="auth-password" type="password" placeholder="Password" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-5 py-4 mb-6">
+
+            <button onclick="handleLogin()" class="w-full py-3.5 bg-white text-zinc-900 rounded-3xl font-medium">Login</button>
+            
+            <p class="text-center text-sm text-zinc-400 mt-6">
+                Don't have an account? 
+                <span onclick="switchToRegister()" class="text-cyan-400 cursor-pointer hover:underline">Sign Up</span>
+            </p>
         </div>
     </div>
 
@@ -117,135 +122,219 @@
         </div>
     </div>
 
-<script>
-    const API = 'https://fantasy-ejq7.onrender.com/api';   // ← CHANGE THIS
+    <script>
+        const API = 'https://fantasy-ejq7.onrender.com/api';   // ← CHANGE TO YOUR ACTUAL RENDER URL
 
-    let currentUser = null;
-    let players = [];
-    let currentRoster = [];
+        let currentUser = null;
+        let players = [];
+        let currentRoster = [];
+        let isLoginMode = true;
 
-    // ==================== AUTH ====================
-    function showAuthModal() {
-        document.getElementById('auth-modal').classList.remove('hidden');
-        document.getElementById('auth-modal').classList.add('flex');
-    }
+        // ==================== AUTH ====================
+        function showAuthModal() {
+            isLoginMode = true;
+            updateModalTitle();
+            document.getElementById('auth-modal').classList.remove('hidden');
+            document.getElementById('auth-modal').classList.add('flex');
+        }
 
-    async function handleRegister() {
-        const username = document.getElementById('reg-username').value.trim();
-        const email = document.getElementById('reg-email').value.trim();
-        const password = document.getElementById('reg-password').value;
+        function closeAuthModal() {
+            document.getElementById('auth-modal').classList.add('hidden');
+            document.getElementById('auth-modal').classList.remove('flex');
+        }
 
-        if (!username || !email || !password) return alert("All fields are required");
+        function updateModalTitle() {
+            document.getElementById('modal-title').textContent = isLoginMode ? "Login" : "Create Account";
+        }
 
-        try {
-            const res = await fetch(`${API}/register`, {
+        function switchToRegister() {
+            isLoginMode = false;
+            updateModalTitle();
+        }
+
+        async function handleLogin() {
+            const username = document.getElementById('auth-username').value.trim();
+            const password = document.getElementById('auth-password').value;
+
+            if (!username || !password) return alert("Please fill all fields");
+
+            try {
+                const res = await fetch(`${API}/login`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    currentUser = data.user;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    closeAuthModal();
+                    updateUserUI();
+                    alert("Logged in successfully!");
+                } else {
+                    alert(data.error || "Login failed");
+                }
+            } catch (e) {
+                alert("Cannot connect to server");
+            }
+        }
+
+        // ==================== PLAYERS ====================
+        async function loadPlayers() {
+            try {
+                const res = await fetch(`${API}/players`);
+                players = await res.json();
+                renderPlayers();
+            } catch (e) { console.error(e); }
+        }
+
+        function renderPlayers() {
+            const tbody = document.getElementById('players-tbody');
+            tbody.innerHTML = players.map(p => `
+                <tr class="hover:bg-zinc-800">
+                    <td class="px-8 py-5 font-medium">${p.username}</td>
+                    <td class="px-8 py-5 text-zinc-300">${p.team}</td>
+                    <td class="px-8 py-5 text-center">${p.wins}-${p.losses}</td>
+                    <td class="px-8 py-5 text-center text-cyan-400">${p.adp}</td>
+                    <td class="px-8 py-5 text-right">
+                        <button onclick="addToRoster(${p.id})" class="text-xs px-5 py-2 bg-cyan-600 rounded-2xl">Add to Roster</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function addToRoster(id) {
+            if (!currentUser) return alert("Please login first");
+            if (!currentRoster.includes(id)) currentRoster.push(id);
+            alert("Player added to current roster");
+        }
+
+        function showAddPlayerModal() {
+            if (!currentUser?.isAdmin) return alert("Admin only");
+            document.getElementById('add-modal').classList.remove('hidden');
+            document.getElementById('add-modal').classList.add('flex');
+        }
+
+        function closeAddModal() {
+            document.getElementById('add-modal').classList.add('hidden');
+            document.getElementById('add-modal').classList.remove('flex');
+        }
+
+        async function saveNewPlayer() {
+            const username = document.getElementById('modal-username').value.trim();
+            if (!username) return alert("Username required");
+
+            await fetch(`${API}/players`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ username, email, password })
+                body: JSON.stringify({
+                    username,
+                    team: document.getElementById('modal-team').value.trim() || "Independent",
+                    wins: parseInt(document.getElementById('modal-wins').value) || 0,
+                    losses: parseInt(document.getElementById('modal-losses').value) || 0,
+                    adp: parseFloat(document.getElementById('modal-adp').value) || 999
+                })
             });
-            const data = await res.json();
-            alert(data.message || data.error);
-        } catch (e) {
-            alert("Cannot connect to server");
+            closeAddModal();
+            loadPlayers();
         }
-    }
 
-    // ==================== PLAYERS ====================
-    async function loadPlayers() {
-        try {
-            const res = await fetch(`${API}/players`);
-            players = await res.json();
-            renderPlayers();
-        } catch (e) { console.error(e); }
-    }
+        // Bulk CSV
+        async function importCSV(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const text = await file.text();
+            const lines = text.trim().split('\n');
+            const newPlayers = [];
 
-    function renderPlayers() {
-        const tbody = document.getElementById('players-tbody');
-        tbody.innerHTML = players.map(p => `
-            <tr class="hover:bg-zinc-800">
-                <td class="px-8 py-5 font-medium">${p.username}</td>
-                <td class="px-8 py-5 text-zinc-300">${p.team}</td>
-                <td class="px-8 py-5 text-center">${p.wins}-${p.losses}</td>
-                <td class="px-8 py-5 text-center text-cyan-400">${p.adp}</td>
-                <td class="px-8 py-5 text-right">
-                    <button onclick="addToRoster(${p.id})" class="text-xs px-5 py-2 bg-cyan-600 rounded-2xl">Add to Roster</button>
-                </td>
-            </tr>
-        `).join('');
-    }
+            lines.forEach(line => {
+                const parts = line.split(',').map(p => p.trim());
+                if (parts.length >= 4) {
+                    newPlayers.push({
+                        username: parts[0],
+                        team: parts[1] || "Independent",
+                        wins: parseInt(parts[2]) || 0,
+                        losses: parseInt(parts[3]) || 0,
+                        adp: parseFloat(parts[4]) || 999
+                    });
+                }
+            });
 
-    function addToRoster(id) {
-        if (!currentUser) return alert("Please login first");
-        if (!currentRoster.includes(id)) currentRoster.push(id);
-        alert("Player added to roster");
-    }
-
-    // ==================== TEAM CREATION ====================
-    async function createTeam() {
-        if (!currentUser) return alert("Please login first");
-        const name = prompt("Enter Team Name:");
-        if (!name) return;
-
-        try {
-            await fetch(`${API}/teams`, {
+            await fetch(`${API}/bulk-players`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ owner: currentUser.username, name, roster: currentRoster })
+                body: JSON.stringify({ players: newPlayers })
             });
-            alert("Team created successfully!");
-            currentRoster = [];
-            loadMyTeams();
-        } catch (e) { alert("Failed to create team"); }
-    }
-
-    async function loadMyTeams() {
-        if (!currentUser) return;
-        const res = await fetch(`${API}/teams/${currentUser.username}`);
-        const teams = await res.json();
-        document.getElementById('teams-grid').innerHTML = teams.map(t => `
-            <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-6">
-                <div class="font-semibold">${t.name}</div>
-                <div class="text-xs text-zinc-400">${t.roster.length} players</div>
-            </div>
-        `).join('');
-    }
-
-    // ==================== UI ====================
-    function showSection(section) {
-        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-        document.getElementById(section).classList.add('active');
-    }
-
-    function updateUserUI() {
-        const el = document.getElementById('user-info');
-        if (!currentUser) {
-            el.innerHTML = `<button onclick="showAuthModal()" class="px-5 py-2 bg-white text-zinc-900 rounded-3xl text-sm font-medium">Login / Sign Up</button>`;
-        } else {
-            el.innerHTML = `
-                <span class="text-cyan-400">${currentUser.username}</span>
-                <button onclick="logout()" class="ml-4 text-xs px-3 py-1 border border-zinc-600 rounded-2xl">Logout</button>
-            `;
+            loadPlayers();
+            alert(`Imported ${newPlayers.length} players`);
         }
-    }
 
-    function logout() {
-        currentUser = null;
-        localStorage.removeItem('currentUser');
-        updateUserUI();
-    }
+        // ==================== TEAM CREATION ====================
+        async function createTeam() {
+            if (!currentUser) return alert("Please login first");
+            const name = prompt("Enter Team Name:");
+            if (!name) return;
 
-    // ==================== INIT ====================
-    async function init() {
-        const saved = localStorage.getItem('currentUser');
-        if (saved) currentUser = JSON.parse(saved);
+            try {
+                await fetch(`${API}/teams`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ owner: currentUser.username, name, roster: currentRoster })
+                });
+                alert("Team created successfully!");
+                currentRoster = [];
+                loadMyTeams();
+            } catch (e) { alert("Failed to create team"); }
+        }
 
-        updateUserUI();
-        await loadPlayers();
-        showSection('players-section');
-        // Modal will ONLY appear when button is clicked
-    }
+        async function loadMyTeams() {
+            if (!currentUser) return;
+            const res = await fetch(`${API}/teams/${currentUser.username}`);
+            const teams = await res.json();
+            document.getElementById('teams-grid').innerHTML = teams.map(t => `
+                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-6">
+                    <div class="font-semibold">${t.name}</div>
+                    <div class="text-xs text-zinc-400">${t.roster.length} players</div>
+                </div>
+            `).join('');
+        }
 
-    window.onload = init;
-</script>
+        // ==================== UI ====================
+        function showSection(section) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(section).classList.add('active');
+        }
+
+        function updateUserUI() {
+            const el = document.getElementById('user-info');
+            if (!currentUser) {
+                el.innerHTML = `<button onclick="showAuthModal()" class="px-5 py-2 bg-white text-zinc-900 rounded-3xl text-sm font-medium">Login / Sign Up</button>`;
+            } else {
+                el.innerHTML = `
+                    <span class="text-cyan-400">${currentUser.username}</span>
+                    <button onclick="logout()" class="ml-4 text-xs px-3 py-1 border border-zinc-600 rounded-2xl">Logout</button>
+                `;
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('currentUser');
+            updateUserUI();
+        }
+
+        // Init
+        async function init() {
+            const saved = localStorage.getItem('currentUser');
+            if (saved) currentUser = JSON.parse(saved);
+
+            updateUserUI();
+            await loadPlayers();
+            showSection('players-section');
+        }
+
+        window.onload = init;
+    </script>
 </body>
 </html>
