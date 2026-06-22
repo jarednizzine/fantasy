@@ -20,8 +20,8 @@ const db = new sqlite3.Database('./fantasyforge.db');
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'YOUR_GMAIL@gmail.com',
-        pass: 'YOUR_APP_PASSWORD'
+        user: 'cryptojared9@gmail.com',
+        pass: 'Theclash99!!'
     }
 });
 
